@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('접수 등록/수정')}"></head>
+<body>
+<main>
+  <h1 th:text="${ticket.id == null} ? '새 접수' : '접수 #' + ${ticket.id}">새 접수</h1>
+
+  <form th:object="${ticket}"
+        th:action="${ticket.id == null} ? @{/tickets} : @{/tickets/{id}(id=${ticket.id})}"
+        method="post">
+    <label>제목
+      <input type="text" th:field="*{title}" required maxlength="200">
+    </label>
+    <label>서버명
+      <input type="text" th:field="*{serverName}" required maxlength="100" placeholder="예: was01">
+    </label>
+    <label>상태
+      <select th:field="*{status}">
+        <option value="OPEN">접수</option>
+        <option value="WORKING">처리중</option>
+        <option value="DONE">완료</option>
+      </select>
+    </label>
+    <label>내용
+      <textarea th:field="*{content}" rows="8"></textarea>
+    </label>
+    <div class="row">
+      <button type="submit">저장</button>
+      <a class="btn ghost" th:href="@{/tickets}">목록</a>
+    </div>
+  </form>
+
+  <form th:if="${ticket.id != null}" style="margin-top:16px"
+        th:action="@{/tickets/{id}/delete(id=${ticket.id})}" method="post"
+        onsubmit="return confirm('삭제할까요?');">
+    <button type="submit" class="danger">삭제</button>
+  </form>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

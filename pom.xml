@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    부모 POM: 의존성 버전(Tomcat, Jackson, HikariCP 등)을 Spring Boot 가 한꺼번에 관리합니다.
+    3.5.16 을 못 찾는다는 오류가 나면 3.5.0 으로 바꿔서 시도하세요.
+    (참고) Spring Boot 3.5 의 무료 지원은 2026-06-30 에 끝났습니다. 실습용으로만 쓰세요.
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.16</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.example</groupId>
+  <artifactId>board</artifactId>
+  <version>1.0.0</version>
+  <!-- war: 외부 Tomcat 의 webapps 에 넣어 배포하는 형태 -->
+  <packaging>war</packaging>
+  <name>board</name>
+  <description>서버 점검/장애 접수 게시판 (CI/CD 실습용)</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <!-- Jenkins 가 -Dbuild.number=$BUILD_NUMBER 로 덮어씁니다. application.properties 의 @build.number@ 로 들어갑니다. -->
+    <build.number>local</build.number>
+    <git.commit>none</git.commit>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mariadb.jdbc</groupId>
+      <artifactId>mariadb-java-client</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- 내장 Tomcat 은 "provided": WAR 에 넣지 않고, 외부 Tomcat 이 제공한다는 뜻 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-tomcat</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <!-- 결과물 이름을 ROOT.war 로 고정: Tomcat 에서 컨텍스트 경로 "/" 로 배포됩니다 -->
+    <finalName>ROOT</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

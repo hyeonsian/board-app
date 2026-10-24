@@ -1,0 +1,101 @@
+// Part 10 파이프라인: 승인 단계 + 한 대씩 빼고 배포하는 롤링 배포
+// 사용법: 이 파일의 내용을 Jenkinsfile 에 덮어쓰고 commit/push 합니다.
+// 전제: WAS 2대 이상, Apache 가 balancer + /ready 헬스체크로 구성됨, Jenkins 전역 환경변수 WAS_HOSTS 에 사설 IP 를 공백으로 나열
+pipeline {
+  agent any
+
+  options {
+    skipDefaultCheckout(true)
+    disableConcurrentBuilds()
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+  }
+
+  triggers { pollSCM('H/2 * * * *') }
+
+  environment {
+    DEPLOY_USER = 'rocky'
+    SSH_OPTS    = '-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10'
+    // Apache 헬스체크 주기(5초)보다 충분히 길게: 빠지는 것/들어오는 것이 반영될 시간
+    DRAIN_WAIT  = '12'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Build & Test') {
+      steps {
+        sh '''
+          GIT_SHORT=$(git rev-parse --short HEAD)
+          mvn -B -ntp clean package -Dbuild.number=${BUILD_NUMBER} -Dgit.commit=${GIT_SHORT}
+        '''
+      }
+      post {
+        always { junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml' }
+      }
+    }
+
+    stage('Archive') {
+      steps { archiveArtifacts artifacts: 'target/ROOT.war', fingerprint: true }
+    }
+
+    // 사람이 승인해야 운영에 반영됩니다. 30분 안에 누르지 않으면 중단됩니다.
+    stage('Approve') {
+      steps {
+        timeout(time: 30, unit: 'MINUTES') {
+          input message: "build #${env.BUILD_NUMBER} 를 운영(WAS 전체)에 배포할까요?", ok: '배포 승인'
+        }
+      }
+    }
+
+    stage('Rolling Deploy') {
+      steps {
+        sshagent(credentials: ['was-ssh-key']) {
+          sh '''
+            : "${WAS_HOSTS:?Jenkins 전역 환경변수 WAS_HOSTS 를 설정하세요}"
+            for H in ${WAS_HOSTS}; do
+              echo "=== [$H] 1/4 스크립트와 WAR 전송 ==="
+              ssh ${SSH_OPTS} ${DEPLOY_USER}@${H} 'mkdir -p /tmp/deploy'
+              scp ${SSH_OPTS} target/ROOT.war deploy/deploy.sh ${DEPLOY_USER}@${H}:/tmp/deploy/
+              ssh ${SSH_OPTS} ${DEPLOY_USER}@${H} "sudo install -D -m 750 /tmp/deploy/deploy.sh /opt/deploy/deploy.sh"
+
+              echo "=== [$H] 2/4 로드밸런서에서 제외 (drain) ==="
+              ssh ${SSH_OPTS} ${DEPLOY_USER}@${H} "sudo /opt/deploy/deploy.sh drain"
+              sleep ${DRAIN_WAIT}
+
+              echo "=== [$H] 3/4 배포 (실패하면 자동 롤백 후 여기서 파이프라인 중단) ==="
+              ssh ${SSH_OPTS} ${DEPLOY_USER}@${H} "sudo /opt/deploy/deploy.sh deploy /tmp/deploy/ROOT.war ${BUILD_NUMBER}"
+
+              echo "=== [$H] 4/4 로드밸런서에 복귀 (undrain) ==="
+              ssh ${SSH_OPTS} ${DEPLOY_USER}@${H} "sudo /opt/deploy/deploy.sh undrain"
+              sleep ${DRAIN_WAIT}
+            done
+          '''
+        }
+      }
+    }
+
+    // 로드밸런서를 통해 10번 요청해서 모두 새 build 번호가 응답하는지 확인 (두 대 모두 새 버전이어야 통과)
+    stage('Smoke test') {
+      steps {
+        sh '''
+          : "${APP_URL:?Jenkins 전역 환경변수 APP_URL 을 설정하세요}"
+          EXPECT='"build":"'"${BUILD_NUMBER}"'"'
+          for i in $(seq 1 10); do
+            RESP=$(curl -fsS -m 5 "${APP_URL}/health")
+            echo "$RESP"
+            echo "$RESP" | grep -qF "$EXPECT" || { echo "이전 버전이 응답했습니다"; exit 1; }
+          done
+          echo "모든 응답이 build ${BUILD_NUMBER} 입니다"
+        '''
+      }
+    }
+  }
+
+  post {
+    success { echo "롤링 배포 성공: build #${env.BUILD_NUMBER}" }
+    failure { echo '실패: 배포 중 실패한 서버는 drain 상태로 남아 있을 수 있습니다. 확인 후 해당 서버에서 sudo /opt/deploy/deploy.sh status / undrain 을 실행하세요.' }
+  }
+}

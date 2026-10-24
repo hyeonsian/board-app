@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title}">제목</title>
+  <style>
+    :root { --fg:#1f2933; --muted:#667085; --line:#e4e7ec; --accent:#2457d6; --bg:#f7f8fa; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans KR", sans-serif; color:var(--fg); background:var(--bg); }
+    main { max-width: 920px; margin: 32px auto 12px; padding: 0 16px; }
+    h1 { font-size: 22px; margin: 0 0 16px; }
+    table { width:100%; border-collapse: collapse; background:#fff; border:1px solid var(--line); }
+    th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; }
+    th { background:#f2f4f7; color:var(--muted); font-weight:600; }
+    a { color: var(--accent); text-decoration:none; }
+    .search { display:flex; gap:8px; margin-bottom:12px; }
+    input[type=text], select, textarea { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; background:#fff; }
+    .search input[type=text] { flex:1; }
+    button, .btn { display:inline-block; padding:8px 14px; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:6px; font:inherit; cursor:pointer; }
+    button.danger { background:#fff; color:#b42318; border-color:#b42318; }
+    .btn.ghost { background:#fff; color:var(--accent); }
+    label { display:block; margin-bottom:12px; font-size:14px; color:var(--muted); }
+    label > input, label > select, label > textarea { margin-top:4px; color:var(--fg); }
+    .badge { padding:2px 8px; border-radius:10px; font-size:12px; background:#eef2f6; }
+    .s-OPEN { background:#fff1e0; color:#9a5b00; }
+    .s-WORKING { background:#e3edff; color:#1d4fb8; }
+    .s-DONE { background:#e2f6ea; color:#0f7a3d; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .footer { max-width:920px; margin:0 auto 32px; padding:0 16px; font-size:12px; color:var(--muted); }
+  </style>
+</head>
+<body>
+<footer th:fragment="footer" class="footer">
+  v<span th:text="${app.version}">1.0.0</span>
+  · build #<span th:text="${app.build}">local</span>
+  · commit <span th:text="${app.commit}">none</span>
+  · served by <strong th:text="${app.hostName}">host</strong>
+</footer>
+</body>
+</html>

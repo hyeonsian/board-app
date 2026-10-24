@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('서버 점검/장애 접수')}"></head>
+<body>
+<main>
+  <h1>서버 점검/장애 접수</h1>
+
+  <form class="search" method="get" th:action="@{/tickets}">
+    <input type="text" name="q" th:value="${q}" placeholder="제목 또는 서버명 검색">
+    <button type="submit">검색</button>
+    <a class="btn ghost" th:href="@{/tickets/new}">+ 새 접수</a>
+  </form>
+
+  <table>
+    <thead>
+      <tr><th>번호</th><th>제목</th><th>서버</th><th>상태</th><th>접수일시</th></tr>
+    </thead>
+    <tbody>
+      <tr th:each="t : ${tickets}">
+        <td th:text="${t.id}">1</td>
+        <td><a th:href="@{/tickets/{id}(id=${t.id})}" th:text="${t.title}">제목</a></td>
+        <td th:text="${t.serverName}">was01</td>
+        <td><span class="badge" th:classappend="${'s-' + t.status}" th:text="${t.statusLabel}">접수</span></td>
+        <td th:text="${t.createdAtText}">2026-10-24 12:00</td>
+      </tr>
+      <tr th:if="${#lists.isEmpty(tickets)}">
+        <td colspan="5">접수된 내역이 없습니다.</td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>
